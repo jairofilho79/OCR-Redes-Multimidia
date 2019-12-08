@@ -3,70 +3,128 @@
   <head>
     <meta charset="UTF-8">
     <title>Tesseract.js Offline</title>
+    <link href="../node_modules/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet"> 
+    <link rel="stylesheet" href="./w3.css">
+    <script src="../node_modules/tesseract.js/dist/tesseract.min.js"></script>  
+    <script src="../node_modules/@fortawesome/fontawesome-free/js/all.min.js"></script>
+
     <style>
-      #myProgress {
-        width: 100%;
-        background-color: grey;
+      body {
+        margin: 0;
+        padding: 0;
+        margin-top: -10px;
       }
 
-      #myBar {
-        width: 1%;
-        height: 30px;
-        background-color: green;
+      header {
+        text-align: center;
+        background: url("./bg.jpg") repeat;
+        padding-bottom: 2px;
+      }
+      header h1, header h2, header h4 {
+        font-weight: 600;
+        color: lightsteelblue;
       }
     </style>
-    <script src="../node_modules/tesseract.js/dist/tesseract.min.js"></script>
-  </head>
+    
+</head>
   <body>
+      <header>
+          <h1>Redes Multimídia</h1>
+          <h2>Optical Character Recognition (OCR)</h2>
+          <h4>Jairo Filho - 201605940016  </h4>
+          <h4>Gabriel Abreu - 2014059400  </h4>
+        </header>
       <div>
-        <input type="file" id="getImage" accept="image/*">
-        <br>
-        <img height="300" width="300" id="imagePreview" src="#" alt="preview">
-        <hr>
-        Receber Atualização de logs
-        <div id="logs"></div>
-        <div id="myProgress">
-            <div id="myBar"></div>
-          </div>
-        <p id="resultado"></p>
+        <button style="display: block; margin: 5px auto;" class="w3-btn w3-white w3-border w3-border-red w3-round-large">
+          <label for="getImage">Insira a mídia</label>
+        </button>
+        <input type="file" id="getImage" style="display: none;" accept="image/*">
+        
+        <img style="display: none; margin: 2px auto;" height="300" width="300" id="imagePreview" src="#" alt="preview">
+        
+        <div style="display: block; margin: 5px auto; text-align: center;">
+            <hr>
+          <div  id="logs"></div>
+          <!-- Iniciando -->
+          <i style="display: none; margin: 2px auto;" id="iniciando" class="fas fa-cog fa-spin"></i>
+          <!-- Processando -->
+          <i style="display: none; margin: 2px auto;" id="processando" class="fas fa-spinner fa-pulse"></i>
+
+          <!-- Concluído com sucesso -->
+          <i style="display: none; margin: 2px auto;" id="consucesso" class="fas fa-check-circle"></i>
+
+          <i style="display: none; margin: 2px auto;" id="confalha" class="fas fa-times-circle"></i>
+          <hr>
+        </div>
+        
+
+        <p style="display: block; margin: 2px auto; text-align: center;" id="resultado"></p>
       </div>
       <script>
-        //https://github.com/tesseract-ocr/tesseract/wiki/ImproveQuality
-        //https://www.techradar.com/news/best-ocr-software
-        //https://kdzwinel.github.io/JS-OCR-demo/
-        //https://antimatter15.com/ocrad.js/demo.html
-          const { TesseractWorker } = Tesseract;
-          const worker = new TesseractWorker({
+          const { createWorker } = Tesseract;
+          const worker = createWorker({
             workerPath: '../node_modules/tesseract.js/dist/worker.min.js',
-            langPath: '../lang-data',
+            langPath: '../lang-data/',
             corePath: '../node_modules/tesseract.js-core/tesseract-core.wasm.js',
           });
           
-          document.getElementById("getImage").addEventListener("change", (event) => {
+          document.getElementById("getImage").addEventListener("change", async (event) => {
+            hideIcons()
+            document.getElementById('logs').innerText = "Iniciando."
+            document.getElementById('iniciando').style.display = "block"
             const image = event.target.files[0]
+            
             readURL(image)
-            //'../images/download.png'
-            worker
-            .recognize(image)
-            .progress((info) => {
-              document.getElementById('logs').innerText = info.status
-              document.getElementById('myBar').style.width = Math.round(info.progress*100) + '%'
-            })
-            .then((result) => {
-              document.getElementById('resultado').innerText = result.text
-            });
+
+            await worker.load();
+            await worker.loadLanguage('eng');
+            await worker.initialize('eng');
+            
+            hideIcons()
+            document.getElementById('logs').innerText = "Processando..."
+            document.getElementById('processando').style.display = "block"
+            try {
+              const { data: { text } } = await worker.recognize(image);
+              document.getElementById('logs').innerText = "Concluído."
+              hideIcons()
+              document.getElementById('consucesso').style.display = "block"
+              document.getElementById('resultado').innerText = text
+            } catch(e) {
+              alert('Erro!')
+              document.getElementById('logs').innerText = "Falhou."
+              hideIcons()
+              document.getElementById('confalha').style.display = "block"
+              throw e
+            }
+            // await worker.terminate();
           })
+
+          // (async () => {
+          //   await worker.load();
+          //   await worker.loadLanguage('eng');
+          //   await worker.initialize('eng');
+          //   const { data: { text } } = await worker.recognize('../images/testocr.png');
+          //   console.log(text);
+          //   await worker.terminate();
+          // })();
 
           function readURL(image) {
             let reader = new FileReader();
               
             reader.onload = function(e) {
               document.getElementById('imagePreview').setAttribute('src', e.target.result);
+              document.getElementById('imagePreview').style.display = "block"
             }
             
             reader.readAsDataURL(image);
           }
 
+          function hideIcons() {
+            document.getElementById('iniciando').style.display = "none"
+            document.getElementById('processando').style.display = "none"
+            document.getElementById('consucesso').style.display = "none"
+            document.getElementById('confalha').style.display = "none"
+          }
           
         </script>
   </body>
